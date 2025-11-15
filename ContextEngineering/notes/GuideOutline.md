@@ -346,6 +346,14 @@ Some models like OpenAI's GPT-4.1 and GPT-4.1 mini show cached input pricing at 
 
 ### Context Failure Modes
 
+Context engineering applies across three main context types: (1) Instructions—prompts, memories, few-shot examples, tool descriptions; (2) Knowledge—facts, memories; (3) Tools—feedback from tool calls. For agents performing long-running tasks with accumulating tool feedback, context management becomes critical to avoid exceeding context window limits, ballooning costs/latency, and performance degradation.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
+
+The article identifies common context problems: **Context Poisoning** (hallucinations entering context), **Context Distraction** (overwhelming training data), **Context Confusion** (superfluous context influencing responses), and **Context Clash** (disagreeing context parts).
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
+
 #### Context Poisoning
 
 When hallucinations or errors enter the context and are repeatedly referenced, corrupting subsequent reasoning. The Gemini 2.5 technical report documented this issue in their Pokémon-playing agent, where the agent would hallucinate game state information that poisoned the "goals" section of context. The agent would then develop nonsensical strategies pursuing impossible or irrelevant goals. Once the context is poisoned with misinformation, it can take a very long time to undo.
@@ -484,7 +492,13 @@ Agents regularly write notes persisted outside the context window, pulled back i
 
 #### AI Log Files
 
-_No content available for this topic._
+**Scratchpads:** Note-taking mechanisms that persist information during task execution. Anthropic's multi-agent researcher saves plans to memory when approaching the 200K token limit. Can be implemented as tool calls writing to files or as fields in runtime state objects.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
+
+**Scratchpad Retrieval:** Via tool calls for file-based scratchpads, or state exposure for runtime state scratchpads.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
 
 #### Planning Files
 
@@ -501,6 +515,14 @@ The memory tool operates entirely client-side through tool calls. Developers man
 Content from Braindumpnotes.md
 
 [See: Managing context on the Claude Developer Platform](https://www.anthropic.com/news/context-management)
+
+**Memories:** Persisting information across multiple sessions. Reflexion introduced reflection after each agent turn with self-generated memories. Generative Agents created memories synthesized periodically from past feedback. Popular implementations include ChatGPT, Cursor, and Windsurf's auto-generated long-term memories.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
+
+**Memory Selection:** Fetching episodic memories (few-shot examples), procedural memories (instructions), or semantic memories (facts). Code agents commonly use specific files always pulled into context: Claude Code uses CLAUDE.md; Cursor and Windsurf use rules files. For larger collections, embeddings and knowledge graphs assist with selection. Challenge: ensuring relevant memory retrieval without unexpected injections.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
 
 ---
 
@@ -604,6 +626,10 @@ Summarizing context is easy to do but hard to perfect for any given agent. Knowi
 
 [See: How to Fix Your Context](https://www.dbreunig.com/2025/06/26/how-to-fix-your-context.html)
 
+**Summarization:** Claude Code's "auto-compact" triggers at 95% context window usage, summarizing the full user-agent interaction trajectory. Can use recursive or hierarchical strategies. Applied at specific points: post-processing token-heavy tool calls, or at agent-agent boundaries for knowledge handoff. Cognition uses fine-tuned models for capturing specific events/decisions.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
+
 #### Context Pruning
 
 Context pruning involves removing irrelevant or otherwise unneeded information from the context. Agents accrue context as they fire off tools and assemble documents. Periodically assessing what's been assembled and removing cruft improves performance. This could be tasked to your main LLM, a separate LLM-powered tool, or something more tailored to pruning.
@@ -617,6 +643,10 @@ A current method is Provence, "an efficient and robust context pruner for Questi
 This pattern argues strongly for maintaining a structured version of your context in a dictionary or other form, from which you assemble a compiled string prior to every LLM call. This structure helps when pruning, ensuring main instructions and goals are preserved while document or history sections can be pruned or summarized.
 
 [See: How to Fix Your Context](https://www.dbreunig.com/2025/06/26/how-to-fix-your-context.html)
+
+**Trimming:** Filtering or pruning context using heuristics (e.g., removing older messages) or trained pruners like Provence for Question-Answering.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
 
 ---
 
@@ -976,6 +1006,14 @@ Too many tools overload agents, especially with overlapping tool descriptions ca
 
 [See: Context Engineering for Agents](https://rlancemartin.github.io/2025/06/23/context_engineering/)
 
+**Tool Selection:** Using RAG on tool descriptions to prevent tool overload from overlapping descriptions. Research shows 3-fold improvement in tool selection accuracy.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
+
+**Knowledge Retrieval:** RAG presents significant challenges, especially for code agents. Windsurf's approach combines AST parsing for semantic chunking, embedding search, grep/file search, knowledge graph retrieval, and re-ranking as codebases grow.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
+
 ---
 
 ### Tool Response Design
@@ -1092,6 +1130,18 @@ Subagents are not about playing house and anthropomorphizing roles—**subagents
 Subagents are separate AI helpers with their own instructions, tools, and memory. They're like having a team of workers where each worker does a messy job, then comes back with just the important results. This approach addresses a core challenge in multi-agent systems: maintaining context coherence while enabling specialization.
 
 [See: Slash Commands vs Subagents: How to Keep AI Tools Focused](https://jxnl.co/writing/2025/08/29/context-engineering-slash-commands-subagents/)
+
+**Multi-Agent:** Splitting context across sub-agents with specific tools, instructions, and isolated context windows. OpenAI Swarm library emphasizes separation of concerns. Anthropic's multi-agent researcher showed sub-agents with isolated contexts outperformed single-agent because each context window focuses on narrower sub-tasks. Sub-agents operate in parallel, exploring different aspects simultaneously. Trade-offs: up to 15× more tokens, requiring careful prompt engineering for planning and coordination.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
+
+**Sandboxing:** HuggingFace's CodeAgent outputs code containing tool calls that runs in sandboxes, isolating token-heavy objects (images, audio) from the LLM. Selected context (return values) passes back to the LLM.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
+
+**State Management:** Runtime state objects with schemas isolate context. One field (e.g., messages) exposes to the LLM at each turn while other fields selectively store information for later use.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
 
 #### When to Use Sub-Agents
 
@@ -1304,6 +1354,142 @@ The most important part of code review is mental alignment—keeping team member
 
 ---
 
+### Agentic Engineering: Prompts as Code, Files as State
+
+This article presents a structured framework for "agentic engineering" by conceptualizing LLMs as "shitty general purpose computers" that can be programmed using natural language prompts. The author addresses the core challenges of using LLM coding tools on large, established codebases and proposes a metaprogramming approach where prompts serve as "code" and JSON/Markdown files serve as persistent state.
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Core Problems with Current Agentic Tools:**
+
+**Context Limitations:** LLM tools lack comprehensive codebase understanding either due to incomplete context provision or insufficient context window size. Even with full context, LLMs struggle with execution flow beyond sequential scripts—they get lost in multi-process systems, IPC, client-server architectures, and concurrent execution.
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Lack of Taste:** LLMs generate the statistical mean of code they've trained on, resulting in over-engineered solutions rather than elegant, minimal designs. They reach for "best practices" that create maintenance and bug-hiding complexity.
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Context Degradation:** Performance degrades around 100K tokens regardless of benchmark claims. Models lose track of details buried in context middle. Many tools (like Cursor) further reduce context to save token costs, potentially missing crucial information.
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Limited Control:** Most tools inject system prompts, additional instructions, and tool definitions that eat context and provide opportunities for model confusion. Claude Code provides the best control with essentially unlimited tokens on Max plan, though it still has unchangeable system prompts and VS Code integration additions.
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**The LLM-as-Computer Framework:**
+
+The author maps traditional programming concepts to LLM interactions:
+
+**Program = Prompt:** Written in natural language, specifying initial inputs, "importing" external functions via tool descriptions, implementing business logic through control flow (sequential steps, loops, conditionals, goto). Tool calls and user input serve as I/O.
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Inputs (Three Sources):**
+1. Prepared information (codebase docs, style guides, architecture) baked into prompts or loaded from disk
+2. User input during execution (clarifications, corrections, requirements)
+3. Tool outputs (file contents, command results, API responses)
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**State (Persistent and Ephemeral):**
+- Context window state is treated as ephemeral since compaction eventually wipes it
+- Substantial state serializes to disk: JSON for structured data (enabling surgical updates via jq), Markdown for smaller unstructured data
+- Disk-based state enables resuming from any point with fresh context, completely sidestepping compaction issues
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Outputs (Multiple Artifact Types):**
+- Generated code and diffs
+- Opened files in editors
+- Codebase statistics
+- Change summaries
+- Any artifact documenting the program's actions
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Real-World Application: Porting Spine Runtimes**
+
+The author applied this framework to port changes in Spine skeletal animation software between releases (4,820 insertions, 4,679 deletions across 79 Java files) to multiple target languages. The manual process was tedious and error-prone: scanning changesets, planning dependency order, porting line-by-line while maintaining compilability, facing walls of errors due to brain fatigue.
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**The "Port Java to X" Program Structure:**
+
+**Initial Input and State (porting-plan.json):**
+- Metadata: source/target branches, paths, target language
+- deletedFiles: removed Java files needing corresponding deletions
+- portingOrder: changed files with type arrays containing name, kind, line ranges, porting state, candidate target files
+- The portingState field ("pending"/"done") enables resumable sessions
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Pre-generation via generate-porting-plan.js:**
+- Runs git diff to find changed Java files
+- Uses lsp-cli to extract complete type information from Java and target runtime
+- Analyzes dependencies to create porting order (enums → interfaces → classes)
+- Finds candidate files in target runtime
+- Outputs structured JSON queryable via jq
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Why Pre-generate:**
+- Determinism: same inputs always produce same plan
+- Context efficiency: avoids wasting tokens/turns on exploration
+- Speed: seconds vs. orders of magnitude longer LLM exploration
+- Transforms open-ended exploration into structured data processing
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Function Library (Tools):**
+- **VS Code Integration (vs-claude MCP):** Opens files/diffs for human review, keeping humans in the loop
+- **Progress Tracking (jq queries):** Pre-written, tested queries for progress percentage, types by state, completed types list, remaining count
+- **Compile Testing:** Language-specific build commands with explicit warnings about what not to do (preventing wasted time on individual TypeScript/Haxe file compilation)
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Main Workflow (Deterministic Loop):**
+
+1. **Setup (One-time):**
+   - Read metadata from porting-plan.json via jq
+   - Abort if fails (defensive programming ensuring required input exists)
+   - Generate conventions file if missing: analyze target runtime for coding patterns (class syntax, naming, inheritance, file organization, namespace structure, memory management, error handling, documentation format, type system specifics, property patterns). Uses task agents in parallel. User reviews before proceeding.
+   - Create porting-notes.md if missing (scratchpad for observations and edge cases discovered during porting)
+
+2. **Port Types Loop:**
+   - Find next pending type via precise jq query
+   - Open files in VS Code (Java file, Java diff, candidate target files)
+   - Human checkpoint: ask "Port this type?" and wait for confirmation (safety mechanism)
+   - Read source files: **ENTIRE files** into context for accurate porting (emphasis prevents LLM laziness)
+   - Port the type: follow conventions, create target files if needed, port incrementally (structure first, then implementations), use MultiEdit for changes, ensure 100% functional parity, update documentation
+   - Human checkpoint: show diff, summarize work, ask "Mark as done?"
+   - Update state: use jq to surgically modify portingState field in porting-plan.json
+   - Update porting-notes.md with new patterns/edge cases
+   - Human checkpoint: show what was ported, ask "Continue to next type?"
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Key Insights:**
+
+The workflow demonstrates structured thinking: initialization, precise function calls, state management, human checkpoints, deterministic loops. Unlike ad hoc prompting where conversations meander, this programmatic approach creates a reproducible, resumable workflow. The LLM becomes a reliable executor of structured instructions rather than an unpredictable chat partner.
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Results:** What previously took 2-3 weeks of manual porting now takes 2-3 days. The tedious mechanical tasks are automated, freeing the author to focus on genuinely difficult problems requiring human insight.
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Future Work:** Testing/debugging workflows (instrumenting prompts to write state at key points for execution traces), structured sub-agent orchestration with observability and communication channels (main agent defines explicit workflows for sub-agents rather than generating them ad hoc).
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+**Core Philosophy:** By treating LLMs as programmable computers rather than conversational partners, the framework represents a step toward turning AI-assisted coding into an engineering discipline rather than "throwing shit at the wall." The mental model transforms work with established codebases by applying structured, deterministic workflows. The approach acknowledges LLM limitations while maximizing reliability through engineering practices: precise specifications, state persistence, human oversight, and resumability.
+
+[See: Prompts are code, .json/.md files are state](https://mariozechner.at/posts/2025-06-02-prompts-are-code/)
+
+---
+
 ## Advanced Topics
 
 ### Model Context Protocol (MCP)
@@ -1415,6 +1601,47 @@ Before writing orchestration code, implement:
 Each test folder represents a real scenario with concrete pass/fail criteria. Validation scripts (e.g., `check.py`) verify output file existence and validate structure using assertions. This provides binary success metrics—either output meets specification or it doesn't, with no subjective evaluation.
 
 [See: Context Engineering: Rapid Agent Prototyping](https://jxnl.co/writing/2025/09/04/context-engineering-rapid-agent-prototyping/)
+
+---
+
+### Context Engineering Frameworks and Libraries
+
+#### LangGraph for Context Engineering
+
+This LangChain blog article introduces context engineering as "the art and science of filling the context window with just the right information at each step of an agent's trajectory." The article draws an analogy to operating systems where the LLM functions as a CPU and its context window as RAM—serving as the model's working memory with limited capacity that must be carefully curated.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
+
+**Four Core Context Engineering Strategies:**
+
+**1. Write Context** (saving outside context window):
+- **Scratchpads:** Note-taking mechanisms that persist information during task execution. Anthropic's multi-agent researcher saves plans to memory when approaching the 200K token limit. Can be implemented as tool calls writing to files or as fields in runtime state objects.
+- **Memories:** Persisting information across multiple sessions. Reflexion introduced reflection after each agent turn with self-generated memories. Generative Agents created memories synthesized periodically from past feedback. Popular implementations include ChatGPT, Cursor, and Windsurf's auto-generated long-term memories.
+
+**2. Select Context** (pulling into context window):
+- **Scratchpad Retrieval:** Via tool calls for file-based scratchpads, or state exposure for runtime state scratchpads.
+- **Memory Selection:** Fetching episodic memories (few-shot examples), procedural memories (instructions), or semantic memories (facts). Code agents commonly use specific files always pulled into context: Claude Code uses CLAUDE.md; Cursor and Windsurf use rules files. For larger collections, embeddings and knowledge graphs assist with selection. Challenge: ensuring relevant memory retrieval without unexpected injections.
+- **Tool Selection:** Using RAG on tool descriptions to prevent tool overload from overlapping descriptions. Research shows 3-fold improvement in tool selection accuracy.
+- **Knowledge Retrieval:** RAG presents significant challenges, especially for code agents. Windsurf's approach combines AST parsing for semantic chunking, embedding search, grep/file search, knowledge graph retrieval, and re-ranking as codebases grow.
+
+**3. Compress Context** (retaining only required tokens):
+- **Summarization:** Claude Code's "auto-compact" triggers at 95% context window usage, summarizing the full user-agent interaction trajectory. Can use recursive or hierarchical strategies. Applied at specific points: post-processing token-heavy tool calls, or at agent-agent boundaries for knowledge handoff. Cognition uses fine-tuned models for capturing specific events/decisions.
+- **Trimming:** Filtering or pruning context using heuristics (e.g., removing older messages) or trained pruners like Provence for Question-Answering.
+
+**4. Isolate Context** (splitting context):
+- **Multi-Agent:** Splitting context across sub-agents with specific tools, instructions, and isolated context windows. OpenAI Swarm library emphasizes separation of concerns. Anthropic's multi-agent researcher showed sub-agents with isolated contexts outperformed single-agent because each context window focuses on narrower sub-tasks. Sub-agents operate in parallel, exploring different aspects simultaneously. Trade-offs: up to 15× more tokens, requiring careful prompt engineering for planning and coordination.
+- **Sandboxing:** HuggingFace's CodeAgent outputs code containing tool calls that runs in sandboxes, isolating token-heavy objects (images, audio) from the LLM. Selected context (return values) passes back to the LLM.
+- **State Management:** Runtime state objects with schemas isolate context. One field (e.g., messages) exposes to the LLM at each turn while other fields selectively store information for later use.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
+
+**LangGraph Implementation:** The article presents LangGraph as purpose-built for context engineering with: (1) Thread-scoped (short-term) memory via checkpointing for scratchpad functionality; (2) Long-term memory persisting context across sessions with flexible storage (LangMem provides memory management abstractions); (3) Fine-grained state control—fetching state within each node to control LLM context exposure; (4) Bigtool library for semantic search over tool descriptions; (5) Built-in compression utilities for summarizing/trimming message lists, with logic for post-processing tool calls or work phases; (6) State schemas and sandbox support (E2B, Pyodide) for context isolation; (7) Multi-agent libraries (supervisor, swarm). LangSmith complements with agent tracing/observability for tracking token usage and evaluation for testing context engineering impact.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
+
+The article emphasizes a virtuous feedback loop: identify context engineering opportunities with LangSmith observability → implement with LangGraph → test with LangSmith evaluation → repeat.
+
+[See: Context Engineering](https://blog.langchain.com/context-engineering-for-agents/)
 
 ---
 

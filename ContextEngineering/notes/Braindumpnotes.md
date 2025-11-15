@@ -102,7 +102,9 @@ Best practices
 * https://www.dbreunig.com/2025/06/22/how-contexts-fail-and-how-to-fix-them.html 
   * https://www.dbreunig.com/2025/06/26/how-to-fix-your-context.html 
 * The New Skill in AI is Not Prompting, It's Context Engineering
+  * https://www.philschmid.de/context-engineering
 * Context Engineering
+  * https://blog.langchain.com/context-engineering-for-agents/
 * Taming agentic engineering - Prompts are code, .json/.md files are state
 * https://www.fuzzycomputer.com/posts/onboarding 
 * https://tomtunguz.com/input-output-ratio/
