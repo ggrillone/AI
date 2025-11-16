@@ -135,3 +135,6 @@ Best practices
   * https://jxnl.co/writing/2025/08/30/context-engineering-compaction/
   * https://jxnl.co/writing/2025/09/04/context-engineering-agent-frameworks-and-form-factors/
   * https://jxnl.co/writing/2025/09/04/context-engineering-rapid-agent-prototyping/ 
+* Toon
+  * https://github.com/toon-format/toon
+  * https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05 

@@ -344,6 +344,207 @@ Some models like OpenAI's GPT-4.1 and GPT-4.1 mini show cached input pricing at 
 
 ---
 
+#### Token-Efficient Data Formats
+
+TOON (Token-Oriented Object Notation) is a compact, human-readable data format designed specifically for serializing JSON data in LLM prompts. It represents the same objects, arrays, and primitives as JSON but uses a syntax that minimizes tokens while making structure easy for models to follow. TOON is production-ready with a TypeScript SDK, CLI tool, comprehensive specification (v2.0), and implementations in multiple languages.
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**Core Concept and Design Philosophy:**
+
+TOON combines YAML's indentation-based structure for nested objects with a CSV-style tabular layout for uniform arrays. The format is optimized for uniform arrays of objects (multiple fields per row with consistent structure across items), achieving CSV-like compactness while adding explicit structure that helps LLMs parse and validate data reliably. TOON serves as a translation layer: use JSON programmatically, encode as TOON for LLM input. The similarity to CSV is intentional—CSV is simple and ubiquitous, and TOON aims to keep that familiarity while remaining a lossless, drop-in representation of JSON.
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**Token Efficiency:**
+
+TOON typically uses 30-60% fewer tokens on large uniform arrays compared to formatted JSON. Benchmark results show TOON achieves 73.9% accuracy (vs JSON's 69.7%) while using 39.6% fewer tokens. Token savings breakdown: compared to formatted JSON (58.8% reduction), compact JSON (35.2% reduction), YAML (48.2% reduction), and XML (64.4% reduction) on flat tabular datasets. The format excels with uniform arrays of objects but can be less efficient than JSON-compact for deeply nested or non-uniform structures.
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**Key Features:**
+
+- **Token-efficient:** 30-60% fewer tokens on large uniform arrays vs formatted JSON
+- **LLM-friendly guardrails:** Explicit array lengths `[N]` and field headers `{field1,field2}` enable validation and help models track structure
+- **Minimal syntax:** Removes redundant punctuation (braces, brackets, most quotes)
+- **Indentation-based structure:** Uses whitespace instead of braces, similar to YAML
+- **Tabular arrays:** Declare keys once, stream data as rows
+- **Optional key folding:** Collapses single-key wrapper chains into dotted paths (e.g., `data.metadata.items`) to reduce indentation and tokens
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**Format Overview:**
+
+Objects with primitive values use simple key-value pairs with indentation for nesting. Arrays are marked with explicit lengths: primitive arrays are inline (`tags[3]: admin,ops,dev`), while arrays of objects with identical primitive fields use tabular format (`items[2]{sku,qty,price}:` followed by rows). Tabular formatting applies recursively—nested arrays of objects also use tabular format if requirements are met. Mixed and non-uniform arrays use list format with hyphens.
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**Quoting Rules:**
+
+TOON quotes strings only when necessary to maximize token efficiency. Inner spaces are allowed; leading/trailing spaces force quotes. Unicode and emoji are safe unquoted. Keys are unquoted if they match identifier pattern (start with letter/underscore, followed by letters/digits/underscores/dots). String values are quoted when: empty, containing leading/trailing spaces, containing active delimiter/colon/quote/backslash/control characters, resembling boolean/number/null, starting with "- ", or looking like structural tokens.
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**Delimiter Options:**
+
+The format supports three delimiters: comma (default), tab (`\t`), or pipe (`|`) for array values and tabular rows. Tab delimiters can provide additional token savings as tabs tokenize more efficiently than commas and rarely appear in natural text, reducing quote-escaping needs. The delimiter is explicitly encoded in array headers (e.g., `items[2 ]` for tab, `items[2|]` for pipe), making the format self-descriptive.
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**Benchmark Results:**
+
+Retrieval accuracy benchmarks tested LLM comprehension across formats using 209 data retrieval questions on 4 models (claude-haiku-4-5, gemini-2.5-flash, gpt-5-nano, grok-4-fast-non-reasoning). TOON ranked highest in efficiency (26.9 accuracy per 1K tokens) with 73.9% accuracy using 2,744 tokens, significantly outperforming JSON compact (22.9, 70.7%, 3,081 tokens), YAML (18.6, 69.0%, 3,719 tokens), JSON (15.3, 69.7%, 4,545 tokens), and XML (13.0, 67.1%, 5,167 tokens).
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+Performance varied by question type: Field retrieval (99.6% for TOON), Structure awareness (88.0%), Structural validation (70.0%), Filtering (56.3%), and Aggregation (54.4%). Dataset performance shows TOON excelling on deeply nested configuration (95.7% accuracy, 666 tokens vs JSON compact's 92.2%, 574 tokens), e-commerce orders with nested structures (81.1%, 7,232 tokens), and uniform employee records (73.8%, 2,518 tokens).
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**When Not to Use TOON:**
+
+- **Deeply nested or non-uniform structures** (tabular eligibility ~0%): JSON-compact often uses fewer tokens
+- **Semi-uniform arrays** (~40-60% tabular eligibility): Token savings diminish, prefer JSON if pipelines already use it
+- **Pure tabular data:** CSV is smaller than TOON for flat tables (TOON adds ~5-10% overhead to provide structure that improves LLM reliability)
+- **Latency-critical applications:** Benchmark on exact setup; some deployments (especially local/quantized models) may process compact JSON faster despite TOON's lower token count
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**Using TOON in LLM Prompts:**
+
+For input, wrap encoded data in fenced code blocks labeled `toon`. The indentation and headers are self-documenting—models parse it naturally. Explicit array lengths `[N]` and field headers `{field1,field2}` help models track structure, especially for large tables. For output generation, be explicit: show expected header format, state formatting rules (2-space indent, no trailing spaces, `[N]` matches row count). For large uniform tables, use tab delimiters (`encode(data, { delimiter: '\t' })`) and instruct models that "fields are tab-separated" for better tokenization.
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**API and Implementation:**
+
+The TypeScript library provides `encode(value, options)` for converting JSON to TOON and `decode(input, options)` for parsing TOON back to JavaScript. Encoding options include indent size, delimiter choice (`,` / `\t` / `|`), key folding mode (`'off'` / `'safe'`), and flatten depth. Decoding options include strict validation (default true) and path expansion to reconstruct dotted keys into nested objects.
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+The CLI tool (`npx @toon-format/cli`) enables command-line conversion with auto-detection based on file extensions. Features include token count estimates/savings display (`--stats`), alternative delimiter support, lenient decoding, and stdin piping support for integration into workflows.
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**Type Conversions:**
+
+Non-JSON types are automatically normalized: finite numbers use decimal form (no scientific notation), NaN/±Infinity become null, BigInts convert to numbers if within safe integer range (otherwise quoted decimal strings), Dates become ISO strings in quotes, and undefined/functions/symbols become null.
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**Conformance and Implementations:**
+
+The format has a complete specification (v2.0) with language-agnostic conformance tests. Official implementations exist for .NET, Dart, Go, Python, and Rust (in development). Community implementations span C++, Clojure, Crystal, Elixir, Gleam, Java, Scala, Lua/Neovim, OCaml, PHP, R, Ruby, Swift, and Kotlin.
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**Connection to Context Engineering:**
+
+TOON directly addresses context engineering concerns by reducing token consumption—a fundamental resource constraint. The explicit structure (array lengths, field headers) provides validation capabilities that help LLMs generate reliable structured output and detect incomplete or corrupted data. By achieving significant token reduction (30-60%) while maintaining or improving accuracy (73.9% vs JSON's 69.7%), TOON enables fitting more data into context windows, reducing costs, and extending the effective working memory available to models. This makes TOON a practical tool for context-aware prompt design, especially when working with large datasets, repetitive structures, or token-limited scenarios where every byte of context matters.
+
+[See: Token-Oriented Object Notation (TOON) - Compact, human-readable, schema-aware JSON for LLM prompts](https://github.com/toon-format/toon)
+
+**Practical Introduction to TOON:**
+
+When building AI and LLM-based applications, one of the biggest hidden costs comes from the format of data itself. Every curly brace `{}`, square bracket `[]`, and quote `"` in JSON counts as a token when sent to an LLM. With large payloads or complex structured data, this token overhead can burn through tokens and money rapidly. TOON addresses this by reimagining JSON for token efficiency and human readability—trimming excess punctuation while maintaining data clarity that both models and humans can parse easily.
+
+[See: TOON (Token-Oriented Object Notation) – The Smarter, Lighter JSON for LLMs](https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05)
+
+TOON stands for Token-Oriented Object Notation—a modern, lightweight data format optimized for LLMs. It's "JSON, reimagined for token efficiency and human readability." TOON eliminates curly braces, square brackets, and most quotes, using indentation and tabular patterns instead. The result is a format that models and humans can parse easily while using far fewer tokens—typically 30-60% fewer tokens on average compared to JSON.
+
+[See: TOON (Token-Oriented Object Notation) – The Smarter, Lighter JSON for LLMs](https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05)
+
+**Why TOON Matters:**
+
+When sending JSON to an LLM, every punctuation mark adds to token count, repeated keys in long arrays multiply costs, and the verbosity doesn't actually help model understanding. TOON solves this by: (1) declaring keys once per table-like block, (2) replacing commas/braces with indentation, and (3) maintaining data clarity while cutting syntactic noise.
+
+[See: TOON (Token-Oriented Object Notation) – The Smarter, Lighter JSON for LLMs](https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05)
+
+**Example Comparison:**
+
+JSON format (verbose):
+```json
+{
+  "users": [
+    { "id": 1, "name": "Alice" },
+    { "id": 2, "name": "Bob" }
+  ]
+}
+```
+
+TOON format (compact):
+```
+users[2]{id,name}:
+  1,Alice
+  2,Bob
+```
+
+Same structure, same meaning, roughly half the tokens.
+
+[See: TOON (Token-Oriented Object Notation) – The Smarter, Lighter JSON for LLMs](https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05)
+
+**TypeScript Implementation:**
+
+Installation via npm/pnpm is straightforward using the official `@toon-format/toon` package. Example usage shows converting a JavaScript object with user data to TOON format using the `encode()` function, and decoding back to JSON using `decode()` if needed. The API is simple and integrates easily into existing workflows.
+
+[See: TOON (Token-Oriented Object Notation) – The Smarter, Lighter JSON for LLMs](https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05)
+
+**JSON vs TOON Comparison:**
+
+Comparison across dimensions:
+- **Purpose:** JSON for universal data format (APIs, configs, storage) vs TOON for token-efficient format for LLMs
+- **Syntax:** JSON verbose with `{}`, `[]`, `"` vs TOON compact with indentation and tabular style
+- **Readability:** JSON moderate vs TOON high (human and model friendly)
+- **Token Usage:** JSON high vs TOON up to 60% fewer
+- **Best Use Case:** JSON for APIs/persistence vs TOON for LLM prompts/structured outputs
+- **Nested Objects:** JSON excellent vs TOON inefficient for deep nesting
+- **Ecosystem:** JSON mature/universal vs TOON emerging/growing fast
+
+[See: TOON (Token-Oriented Object Notation) – The Smarter, Lighter JSON for LLMs](https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05)
+
+**When Not to Use TOON:**
+
+TOON shines for flat, tabular JSON objects but is not ideal for deeply nested structures. Example of deeply nested company/departments/employees structure can actually be longer in TOON, not shorter due to extra indentation and context. Best suited for: flat lists (users, products, messages), prompt templates, and model training/evaluation datasets. Avoid for: deeply nested hierarchies and complex relational data.
+
+[See: TOON (Token-Oriented Object Notation) – The Smarter, Lighter JSON for LLMs](https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05)
+
+**Token Efficiency Snapshot:**
+
+Concrete token counts comparing JSON vs TOON across sample datasets:
+- User list: 150 JSON tokens → 82 TOON tokens (-45% savings)
+- Product catalog: 320 JSON tokens → 180 TOON tokens (-44% savings)
+- Nested data: 410 JSON tokens → 435 TOON tokens (+6% increase, demonstrating limitation)
+
+These numbers show clear token savings for flat structures and token penalty for nested data.
+
+[See: TOON (Token-Oriented Object Notation) – The Smarter, Lighter JSON for LLMs](https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05)
+
+**Practical Benchmarking:**
+
+Practical benchmarking uses Node.js scripts for comparing token usage between JSON and TOON using OpenAI's `tiktoken` tokenizer. The script installs `@toon-format/toon` and `tiktoken`, creates sample data (array of users with id, name, role), encodes to both JSON and TOON formats, tokenizes both using GPT-4 tokenizer, and outputs comparison with percentage savings. Example output shows 84 JSON tokens vs 32 TOON tokens for 61.90% savings.
+
+[See: TOON (Token-Oriented Object Notation) – The Smarter, Lighter JSON for LLMs](https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05)
+
+**Key Takeaway:**
+
+The ecosystem around LLMs is evolving fast, and even small optimizations like switching from JSON to TOON can create huge cost and performance improvements at scale. The advice is to try it out, benchmark with your own datasets, and measure token (and dollar) savings.
+
+[See: TOON (Token-Oriented Object Notation) – The Smarter, Lighter JSON for LLMs](https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05)
+
+**Practical Integration:**
+
+TOON is framed as an emerging but production-ready tool that integrates naturally into existing TypeScript/JavaScript workflows. The official package handles encoding/decoding, making adoption frictionless. For developers building LLM pipelines, prompt templates, or structured AI datasets, TOON offers a straightforward way to reduce token consumption without sacrificing data structure or clarity.
+
+[See: TOON (Token-Oriented Object Notation) – The Smarter, Lighter JSON for LLMs](https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05)
+
+**Connection to Context Engineering:**
+
+TOON directly addresses token management—a core context engineering concern. By reducing token count by 30-60% for tabular data, TOON extends effective context window capacity, enabling more information to fit within token limits. This is particularly valuable for prompt templates with repeated structures, evaluation datasets with uniform records, and any scenario where token efficiency directly impacts cost or feasibility. The format's explicit structure (array lengths, field headers) also aids LLMs in parsing and generating structured outputs accurately, reducing errors in multi-turn workflows where data consistency matters. TOON exemplifies the context engineering principle of curating high-signal tokens by eliminating syntactic noise while preserving semantic content.
+
+[See: TOON (Token-Oriented Object Notation) – The Smarter, Lighter JSON for LLMs](https://dev.to/abhilaksharora/toon-token-oriented-object-notation-the-smarter-lighter-json-for-llms-2f05)
+
+---
+
 ### Context Failure Modes
 
 Context engineering applies across three main context types: (1) Instructions—prompts, memories, few-shot examples, tool descriptions; (2) Knowledge—facts, memories; (3) Tools—feedback from tool calls. For agents performing long-running tasks with accumulating tool feedback, context management becomes critical to avoid exceeding context window limits, ballooning costs/latency, and performance degradation.
